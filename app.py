@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import shutil
 from datetime import datetime
 from collections import deque
 from flask import (
@@ -67,19 +68,21 @@ def upload_image():
     new_filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(UPLOAD_FOLDER, new_filename)
 
+    # Salva arquivo original
     file.save(filepath)
+
+    # COPIA correta para o histórico
+    recent_copy_path = os.path.join(RECENT_FOLDER, new_filename)
+    shutil.copyfile(filepath, recent_copy_path)
 
     result = {
         "file": new_filename,
-        "prediction": "broca",
-        "confidence": 0.92,
+        "prediction": "broca",      # temporário
+        "confidence": 0.92,         # temporário
         "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
     }
 
     recent_predictions.appendleft(result)
-
-    recent_copy_path = os.path.join(RECENT_FOLDER, new_filename)
-    file.save(recent_copy_path)
 
     return jsonify(result)
 
@@ -100,7 +103,8 @@ def dashboard():
     return render_template("dashboard.html")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
+
 
 
 
