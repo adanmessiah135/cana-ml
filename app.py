@@ -84,7 +84,7 @@ def upload_image():
     return jsonify(result)
 
 @app.route("/recent")
-def recent():
+def recent_page():
     return render_template("recent.html", items=list(recent_predictions))
 
 @app.route("/uploads/<path:filename>")
