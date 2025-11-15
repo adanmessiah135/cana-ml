@@ -1,8 +1,9 @@
 Flask==3.0.3
 gunicorn==21.2.0
-numpy==1.24.3
+numpy==1.23.5
 Pillow==10.2.0
 tflite-runtime==2.14.0
+
 
 
 
