@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cana-ML • Últimas Análises</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>🌿 Cana-ML</h2>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('recent_page') }}" class="active">Últimas análises</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </aside>
+
+  <main>
+    <h1>📊 Histórico de Análises</h1>
+
+    <section id="recentContainer" class="recent-list card-container">
+      <p>Carregando histórico...</p>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+

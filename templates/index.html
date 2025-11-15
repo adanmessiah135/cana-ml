@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cana-ML • Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>🌿 Cana-ML</h2>
+    <nav>
+      <a href="{{ url_for('dashboard') }}" class="active">Dashboard</a>
+      <a href="{{ url_for('recent_page') }}">Últimas análises</a>
+      <a href="{{ url_for('logout') }}">Sair</a>
+    </nav>
+  </aside>
+
+  <main>
+    <h1>Painel Cana-ML • Agro Analytics</h1>
+
+    <section class="card-container">
+      <h2>Análise de Imagem</h2>
+      <form id="uploadForm">
+        <input type="file" id="imageInput" name="image" accept="image/*" required>
+        <button type="submit">Analisar</button>
+      </form>
+      <div id="result" class="result-box hidden"></div>
+    </section>
+
+    <section class="card-container">
+        <h2>Últimas análises</h2>
+        <div class="recent-list">
+            <p>Carregando...</p>
+        </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
+

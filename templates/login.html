@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cana-ML • Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center h-screen bg-gray-900 text-gray-100">
+  <div class="bg-gray-800 p-8 rounded-2xl shadow-lg w-96 border border-gray-700">
+    <h2 class="text-2xl font-bold text-center mb-6 text-green-400">🌿 Cana-ML • Agro Analytics</h2>
+
+    {% if error %}
+      <p class="text-red-400 text-center mb-3">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST" class="space-y-4">
+      <div>
+        <label class="block mb-1">Usuário</label>
+        <input type="text" name="username" required class="w-full p-2 rounded-md bg-gray-700 border border-gray-600">
+      </div>
+      <div>
+        <label class="block mb-1">Senha</label>
+        <input type="password" name="password" required class="w-full p-2 rounded-md bg-gray-700 border border-gray-600">
+      </div>
+      <button class="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-md font-semibold">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>
