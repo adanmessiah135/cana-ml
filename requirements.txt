@@ -1,10 +1,6 @@
-setuptools>=65.5.1
-wheel
-pip>=23.1
-
 Flask==3.0.3
 gunicorn==21.2.0
-numpy==1.23.5
+numpy==1.26.4
 Pillow==9.5.0
 
 
