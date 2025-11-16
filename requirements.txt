@@ -1,7 +1,21 @@
 Flask==3.0.3
+firebase-admin==6.4.0
+protobuf==4.25.3
+requests==2.32.3
 gunicorn==21.2.0
-numpy==1.26.4
+
+
+# IA / modelo TFLite
+tensorflow-cpu==2.10.1
+numpy==1.23.5
 Pillow==9.5.0
+
+# Firebase
+firebase-admin==7.1.0
+google-cloud-storage==2.18.2  # (ou similar, se você já tiver)
+
+# O resto que você já usa (setuptools, wheel, etc.)
+
 
 
 

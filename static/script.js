@@ -1,32 +1,30 @@
-// 🌿 Cana-ML Front-End Logic (versão final)
-// Suporte ao histórico + GPS + preview + upload
+// 🌿 Cana-ML Front-End Logic (versão final com GPS + Firebase Storage)
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ====================================
-    // ENVIO DA IMAGEM PARA ANÁLISE
-    // ====================================
-
+    // ================================
+    // CAPTURA DE GEOLOCALIZAÇÃO
+    // ================================
     let userLocation = null;
 
-// Solicitar geolocalização ao abrir
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            userLocation = {
-                lat: pos.coords.latitude.toFixed(6),
-                lon: pos.coords.longitude.toFixed(6)
-            };
-            console.log("GPS capturado:", userLocation);
-        },
-        (err) => {
-            console.warn("GPS negado ou indisponível.", err);
-        }
-    );
-} else {
-    console.warn("Geolocalização não suportada.");
-}
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                userLocation = {
+                    lat: pos.coords.latitude.toFixed(6),
+                    lon: pos.coords.longitude.toFixed(6)
+                };
+                console.log("GPS capturado:", userLocation);
+            },
+            (err) => {
+                console.warn("GPS negado ou indisponível.", err);
+            }
+        );
+    }
 
+    // ================================
+    // ENVIO DA IMAGEM
+    // ================================
     const uploadForm = document.getElementById("uploadForm");
 
     if (uploadForm) {
@@ -44,11 +42,11 @@ if (navigator.geolocation) {
             const formData = new FormData();
             formData.append("file", file);
 
-// Adicionar localização, caso disponível
-if (userLocation) {
-    formData.append("lat", userLocation.lat);
-    formData.append("lon", userLocation.lon);
-}
+            // Enviar GPS se existir
+            if (userLocation) {
+                formData.append("lat", userLocation.lat);
+                formData.append("lon", userLocation.lon);
+            }
 
             const resultBox = document.getElementById("result");
             resultBox.classList.remove("hidden");
@@ -79,11 +77,11 @@ if (userLocation) {
                     }
 
                     <div class="img-box mt-3">
-                        <img src="/uploads/${data.file}" alt="Imagem analisada">
+                        <img src="${data.url}" alt="Imagem analisada">
                     </div>
                 `;
 
-                // Atualiza histórico
+                // Recarregar histórico
                 loadRecent();
 
             } catch (err) {
@@ -93,9 +91,9 @@ if (userLocation) {
         });
     }
 
-    // ====================================
-    // CARREGAR HISTÓRICO DINÂMICO
-    // ====================================
+    // ================================
+    // HISTÓRICO (Firebase Storage)
+    // ================================
     async function loadRecent() {
         const container = document.querySelector(".recent-list");
         if (!container) return;
@@ -113,7 +111,7 @@ if (userLocation) {
                 .map(item => `
                     <div class="recent-item">
                         <div class="img-box">
-                            <img src="${item.file_url}" alt="Imagem analisada">
+                            <img src="${item.url}" alt="Imagem analisada">
                         </div>
 
                         <div class="info">
@@ -136,9 +134,9 @@ if (userLocation) {
         }
     }
 
-    // Executa carregamento automático
     loadRecent();
 });
+
 
 
 
