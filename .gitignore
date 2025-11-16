@@ -1,4 +1,41 @@
+tflite_env/
+*.pyd
+*.dll
+*.lib
+
+
+
+# Ambientes virtuais
+venv/
+env/
+tflite_env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Modelos
+*.h5
+*.keras
+*.tflite
+
+# Arquivos sensíveis
 firebase_key.json
-*.key
-*.pem
-*.p12
+.env
+*.env
+
+# Uploads locais
+uploads/
+static/recent/
+
+# Logs
+*.log
+logs/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+

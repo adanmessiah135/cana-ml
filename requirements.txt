@@ -1,19 +1,18 @@
 Flask==3.0.3
 gunicorn==21.2.0
 
-# Image processing
+# Processamento de Imagem
 Pillow==9.5.0
-
-# TFLite only (SEM TensorFlow)
 numpy==1.23.5
-tflite-runtime==2.14.0
 
-# Firebase Admin (leve e estável)
+# Firebase
 firebase-admin==6.4.0
-
-# Utilitários
 protobuf==4.25.3
 requests==2.31.0
+
+# Runtime TFLite leve para produção
+tflite-runtime==2.14.0
+
 
 
 

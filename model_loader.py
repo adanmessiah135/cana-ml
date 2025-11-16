@@ -2,41 +2,47 @@ import numpy as np
 from PIL import Image
 import tflite_runtime.interpreter as tflite
 
-# Carrega o modelo TFLite na inicialização do servidor
-interpreter = tflite.Interpreter(model_path="model.tflite")
+# Caminho do modelo TFLite dentro do projeto
+MODEL_PATH = "model_best.tflite"
+
+# Carrega intérprete
+interpreter = tflite.Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
 
+# Pegamos os detalhes de entrada e saída
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-# Definir classes do modelo (IGUAL ao seu treinamento)
-CLASSES = ["Broca", "Ferrugem", "Sadia"]
+# Tamanho esperado de entrada
+IMG_SIZE = 224  # ajuste se for diferente no seu modelo
 
 
-def preprocess_image(image_path, target_size=(224, 224)):
-    """Carrega e prepara imagem para o TFLite."""
-    image = Image.open(image_path).convert("RGB")
-    image = image.resize(target_size)
+def preprocess_image(image_path):
+    img = Image.open(image_path).convert("RGB")
+    img = img.resize((IMG_SIZE, IMG_SIZE))
 
-    img_array = np.array(image, dtype=np.float32)
-    img_array = img_array / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+    img = np.array(img, dtype=np.float32)
+    img = img / 255.0  # normalização
+    img = np.expand_dims(img, axis=0)
+    return img
 
-    return img_array
+
+CLASSES = ["EyeSpot", "Healthy", "Mosaic", "RedLeafSpot", "RedRot", "RingSpot", "Rust", "Yellow"]
 
 
 def predict_image(image_path):
-    """Executa inferência no modelo TFLite."""
-    img = preprocess_image(image_path)
+    # prepara imagem
+    input_data = preprocess_image(image_path)
 
-    interpreter.set_tensor(input_details[0]["index"], img)
+    interpreter.set_tensor(input_details[0]["index"], input_data)
     interpreter.invoke()
 
     output = interpreter.get_tensor(output_details[0]["index"])[0]
 
-    class_idx = int(np.argmax(output))
-    confidence = float(output[class_idx])
-    predicted_class = CLASSES[class_idx]
+    class_index = np.argmax(output)
+    confidence = float(output[class_index])
+    class_name = CLASSES[class_index]
 
-    return predicted_class, confidence, class_idx
+    return class_name, confidence, class_index
+
 
