@@ -1,20 +1,24 @@
 Flask==3.0.3
-firebase-admin==6.4.0
-protobuf==4.25.3
-requests==2.32.3
 gunicorn==21.2.0
 
-
-# IA / modelo TFLite
-tensorflow-cpu==2.10.1
-numpy==1.23.5
+# Image processing
 Pillow==9.5.0
 
-# Firebase
-firebase-admin==7.1.0
-google-cloud-storage==2.18.2  # (ou similar, se você já tiver)
+# TFLite (SEM TensorFlow)
+numpy==1.23.5
+tflite-runtime==2.14.0
 
-# O resto que você já usa (setuptools, wheel, etc.)
+# Firebase (versão compatível com Render - sem grpcio)
+firebase-admin==5.3.0
+
+# Utilitários
+protobuf==4.25.3
+requests==2.31.0
+google-cloud-storage==2.7.0
+google-resumable-media==2.4.1
+google-auth==2.22.0
+
+
 
 
 
