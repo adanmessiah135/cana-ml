@@ -1,101 +1,42 @@
-import os
 import numpy as np
 from PIL import Image
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 
-# Caminho do modelo TFLite
-MODEL_PATH = os.path.join("ml", "cana_model_v5_TF210_COMPAT.tflite")
-
-# Carrega o interpretador TFLite
-interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
+# Carrega o modelo TFLite na inicialização do servidor
+interpreter = tflite.Interpreter(model_path="model.tflite")
 interpreter.allocate_tensors()
 
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-# Tenta descobrir o tamanho da imagem a partir do modelo
-# Ex.: [1, 224, 224, 3]
-input_shape = input_details[0]["shape"]
-if len(input_shape) == 4:
-    # Assume formato [batch, height, width, channels] ou [batch, channels, height, width]
-    if input_shape[3] == 3:
-        IMG_SIZE = int(input_shape[1])
-        CHANNELS_LAST = True
-    elif input_shape[1] == 3:
-        IMG_SIZE = int(input_shape[2])
-        CHANNELS_LAST = False  # [1, 3, H, W]
-    else:
-        # fallback padrão
-        IMG_SIZE = 224
-        CHANNELS_LAST = True
-else:
-    # fallback padrão
-    IMG_SIZE = 224
-    CHANNELS_LAST = True
-
-# Classes do modelo (na ordem do treinamento)
-CLASSES = [
-    "EyeSpot",
-    "Healthy",
-    "Mosaic",
-    "RedLeafSpot",
-    "RedRot",
-    "RingSpot",
-    "Rust",
-    "Yellow",
-]
+# Definir classes do modelo (IGUAL ao seu treinamento)
+CLASSES = ["Broca", "Ferrugem", "Sadia"]
 
 
-def preprocess_image(image_path: str) -> np.ndarray:
-    """
-    Abre a imagem, converte para RGB, redimensiona e normaliza
-    no formato esperado pelo modelo TFLite.
-    """
-    img = Image.open(image_path).convert("RGB")
-    img = img.resize((IMG_SIZE, IMG_SIZE))
+def preprocess_image(image_path, target_size=(224, 224)):
+    """Carrega e prepara imagem para o TFLite."""
+    image = Image.open(image_path).convert("RGB")
+    image = image.resize(target_size)
 
-    arr = np.asarray(img, dtype=np.float32) / 255.0  # normaliza [0, 1]
+    img_array = np.array(image, dtype=np.float32)
+    img_array = img_array / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
 
-    if CHANNELS_LAST:
-        # [H, W, C] -> [1, H, W, C]
-        arr = np.expand_dims(arr, axis=0)
-    else:
-        # [H, W, C] -> [C, H, W] -> [1, C, H, W]
-        arr = np.transpose(arr, (2, 0, 1))
-        arr = np.expand_dims(arr, axis=0)
-
-    return arr
+    return img_array
 
 
-def predict_image(image_path: str):
-    """
-    Executa inferência com o modelo TFLite e retorna:
-    - nome da classe
-    - confiança (0.0 a 1.0)
-    - índice da classe
-    """
-    # Prepara input
-    input_tensor = preprocess_image(image_path)
-    interpreter.set_tensor(input_details[0]["index"], input_tensor)
+def predict_image(image_path):
+    """Executa inferência no modelo TFLite."""
+    img = preprocess_image(image_path)
 
-    # Roda o modelo
+    interpreter.set_tensor(input_details[0]["index"], img)
     interpreter.invoke()
 
-    # Obtém saída
-    output_data = interpreter.get_tensor(output_details[0]["index"])
-    # Considera batch 1
-    logits = output_data[0]
+    output = interpreter.get_tensor(output_details[0]["index"])[0]
 
-    # Garante distribuição de probabilidade (softmax)
-    exps = np.exp(logits - np.max(logits))
-    probs = exps / np.sum(exps)
+    class_idx = int(np.argmax(output))
+    confidence = float(output[class_idx])
+    predicted_class = CLASSES[class_idx]
 
-    class_idx = int(np.argmax(probs))
-    confidence = float(probs[class_idx])
+    return predicted_class, confidence, class_idx
 
-    if 0 <= class_idx < len(CLASSES):
-        class_name = CLASSES[class_idx]
-    else:
-        class_name = f"class_{class_idx}"
-
-    return class_name, confidence, class_idx
