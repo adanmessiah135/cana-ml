@@ -3,12 +3,20 @@ services:
     name: cana-ml
     env: python
     pythonVersion: "3.10.12"
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn --workers 4 --bind 0.0.0.0:$PORT app:app"
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install --no-cache-dir -r requirements.txt
+
+    startCommand: >
+      gunicorn app:app
+      --workers 1
+      --timeout 120
+      --preload
+      --bind 0.0.0.0:$PORT
+
     disks:
       - name: uploads
         mountPath: /app/uploads
         sizeGB: 1
-      - name: recent
-        mountPath: /app/static/recent
-        sizeGB: 1
+
