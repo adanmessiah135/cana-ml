@@ -16,19 +16,18 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = "super-secret-key"
 
-# Inicializar Firebase Storage
+# Inicializar Firebase
 init_firebase()
 
-# Pastas locais (somente temporárias)
+# Pasta temporária
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Extensões aceitas
+# Extensões válidas
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
-# Histórico em memória (últimas 10 análises)
+# Histórico em memória
 recent_predictions = deque(maxlen=10)
-
 
 # ===========================================
 # FUNÇÕES AUXILIARES
@@ -79,10 +78,13 @@ def logout():
 
 
 # ===========================================
-# UPLOAD DE IMAGEM + FIREBASE + GPS
+# UPLOAD + IA + FIREBASE + GPS
 # ===========================================
 @app.route("/upload", methods=["POST"])
 def upload_image():
+    if "logged" not in session:
+        return jsonify({"error": "Não autorizado"}), 401
+
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
 
@@ -99,54 +101,51 @@ def upload_image():
     new_filename = f"{uuid.uuid4()}.{ext}"
     local_path = os.path.join(UPLOAD_FOLDER, new_filename)
 
-    # 1) Salva localmente
+    # 1) Salvar localmente
     file.save(local_path)
 
-    # 2) Roda o modelo TFLite
+    # 2) Executar modelo
     try:
         predicted_class, confidence, class_idx = predict_image(local_path)
     except Exception as e:
-        # Se der erro na IA, loga e retorna erro amigável
-        print("Erro ao rodar modelo TFLite:", e)
+        print("Erro na IA:", e)
         os.remove(local_path)
-        return jsonify({"error": "Erro ao processar a imagem com o modelo."}), 500
+        return jsonify({"error": "Erro no modelo IA"}), 500
 
-    # 3) Envia imagem para Firebase Storage
+    # 3) Upload Firebase
     try:
         firebase_url = upload_to_firebase(local_path, new_filename)
+    except Exception as e:
+        print("Erro no Firebase:", e)
+        firebase_url = None
     finally:
-        # 4) Remove arquivo local (independente de sucesso no upload)
         if os.path.exists(local_path):
             os.remove(local_path)
 
-    # 5) Monta link de GPS (se veio do front)
+    # 4) GPS
     lat = request.form.get("lat")
     lon = request.form.get("lon")
-    gps_link = None
-    if lat and lon:
-        gps_link = f"https://www.google.com/maps?q={lat},{lon}"
+    gps_link = f"https://www.google.com/maps?q={lat},{lon}" if lat and lon else None
 
-    # 6) Monta resultado
+    # 5) Resultado final
     result = {
         "file": new_filename,
-        "url": firebase_url,           # URL pública no Firebase
-        "prediction": predicted_class, # classe real
-        "confidence": confidence,      # 0.0 a 1.0
+        "url": firebase_url,
+        "prediction": predicted_class,
+        "confidence": confidence,
+        "class_idx": class_idx,
         "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         "gps_link": gps_link,
-        "class_idx": class_idx,
     }
 
-    # 7) Guarda no histórico em memória
+    # 6) Salvar no histórico
     recent_predictions.appendleft(result)
 
-    # 8) Retorna para o front-end
     return jsonify(result)
 
 
-
 # ===========================================
-# TELA DO HISTÓRICO (HTML)
+# HISTÓRICO (HTML)
 # ===========================================
 @app.route("/recent")
 def recent_page():
@@ -156,33 +155,19 @@ def recent_page():
 
 
 # ===========================================
-# API DO HISTÓRICO (JSON)
+# HISTÓRICO (JSON)
 # ===========================================
 @app.route("/api/recent")
 def api_recent():
-    # Gera uma cópia simples dos itens (pra não modificar o deque original)
-    data = []
-
-    for item in recent_predictions:
-        data.append({
-            "file": item["file"],
-            "url": item["url"],                  # URL do Firebase
-            "prediction": item["prediction"],
-            "confidence": item["confidence"],
-            "timestamp": item["timestamp"],
-            "gps_link": item.get("gps_link"),
-            "class_idx": item.get("class_idx"),
-        })
-
-    return jsonify(data)
-
+    return jsonify(list(recent_predictions))
 
 
 # ===========================================
-# EXECUTAR APP LOCALMENTE
+# EXECUTAR LOCAL
 # ===========================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
 
 
