@@ -1,31 +1,33 @@
-// 🌿 Cana-ML Front-End Logic
-// Autor: Adão & Gemini
+// 🌿 Cana-ML - Front-End Unificado
 
 document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("uploadForm");
-    const resultBox = document.getElementById("result");
 
-    // =====================================================
-    // Envio e análise da imagem
-    // =====================================================
-    if (form) {
-        form.addEventListener("submit", async (e) => {
+    // =========================================================
+    // 1 — ENVIO DA IMAGEM PARA ANÁLISE
+    // =========================================================
+    const uploadForm = document.getElementById("uploadForm");
+
+    if (uploadForm) {
+        uploadForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const file = document.getElementById("imageInput").files[0];
+            const fileInput = document.getElementById("imageInput");
+            const file = fileInput.files[0];
+
             if (!file) {
-                alert("Por favor, selecione uma imagem antes de analisar.");
+                alert("Selecione uma imagem antes de analisar!");
                 return;
             }
 
             const formData = new FormData();
-            formData.append("image", file);
+            formData.append("file", file);  // ✔ backend espera "file"
 
-            resultBox.innerHTML = `<p>🔄 Analisando imagem...</p>`;
+            const resultBox = document.getElementById("result");
             resultBox.classList.remove("hidden");
+            resultBox.innerHTML = "<p>🔄 Processando imagem...</p>";
 
             try {
-                const res = await fetch("/predict", {
+                const res = await fetch("/upload", {
                     method: "POST",
                     body: formData
                 });
@@ -37,38 +39,36 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                // Exibir resultado da análise
                 resultBox.innerHTML = `
-                    <p><b>Classe:</b> ${data.class}</p>
-                    <p><b>Confiança:</b> ${data.confidence}%</p>
-                    <p>${data.explain}</p>
-                    <p><b>Arquivo:</b> ${data.file}</p>
-                    ${data.alert ? `<p class="alert">⚠️ ${data.alert}</p>` : ""}
-                    ${data.gps_link ? `<p><a href="${data.gps_link}" target="_blank" class="map-link">📍 Ver no mapa</a></p>` : ""}
+                    <p><b>Classe:</b> ${data.prediction}</p>
+                    <p><b>Confiança:</b> ${(data.confidence * 100).toFixed(1)}%</p>
                     <p><b>Data:</b> ${data.timestamp}</p>
 
                     <div class="img-box mt-3">
-                        <img src="${data.file_url}" alt="Imagem analisada">
+                        <img src="/uploads/${data.file}" alt="Imagem analisada">
                     </div>
                 `;
 
-                await loadRecent();
+                loadRecent();
 
             } catch (err) {
-                console.error("Erro na análise:", err);
-                resultBox.innerHTML = `<p class="alert">Erro ao processar a imagem.</p>`;
+                console.error(err);
+                resultBox.innerHTML = `<p class="alert">⚠️ Erro ao processar a imagem.</p>`;
             }
         });
     }
 
-    // =====================================================
-    // Carregar histórico de análises
-    // =====================================================
+
+    // =========================================================
+    // 2 — CARREGAR HISTÓRICO /api/recent
+    // =========================================================
     async function loadRecent() {
         const container = document.querySelector(".recent-list");
-        if (!container) return;
+        if (!container) return; // só existe nas páginas certas
 
         try {
-            const res = await fetch("/recent");
+            const res = await fetch("/api/recent");
             const data = await res.json();
 
             if (!data.length) {
@@ -76,18 +76,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            container.innerHTML = data.map(r => `
+            container.innerHTML = data.map(item => `
                 <div class="recent-item">
                     <div class="img-box">
-                        <img src="${r.file_url}" alt="Imagem analisada">
+                        <img src="${item.file_url}" alt="Imagem analisada">
                     </div>
 
                     <div class="info">
-                        <p><b>Classe:</b> ${r.class}</p>
-                        <p><b>Confiança:</b> ${r.confidence}%</p>
-                        <p><b>Data:</b> ${r.timestamp}</p>
-                        ${r.alert ? `<p class="alert">${r.alert}</p>` : ""}
-                        ${r.gps_link ? `<a href="${r.gps_link}" target="_blank" class="map-link">📍 Ver localização</a>` : ""}
+                        <p><b>Classe:</b> ${item.prediction}</p>
+                        <p><b>Confiança:</b> ${(item.confidence * 100).toFixed(1)}%</p>
+                        <p><b>Data:</b> ${item.timestamp}</p>
                     </div>
                 </div>
             `).join("");
@@ -98,33 +96,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Carrega o histórico automaticamente
+    // Carregar histórico automaticamente
     loadRecent();
-
-    document.getElementById("analyzeForm").addEventListener("submit", async function(e) {
-        e.preventDefault();
-
-        document.getElementById("loading").style.display = "block";
-
-        const fileInput = document.getElementById("fileInput");
-        const file = fileInput.files[0];
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
-            const response = await fetch("/analyze", {
-                method: "POST",
-                body: formData
-            });
-
-            document.getElementById("loading").style.display = "none";
-            location.reload();
-        } catch (error) {
-            document.getElementById("loading").style.display = "none";
-            alert("Erro ao processar a imagem!");
-        }
-    });
 });
+
+
+
 
 
