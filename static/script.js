@@ -1,10 +1,32 @@
-// 🌿 Cana-ML - Front-End Unificado
+// 🌿 Cana-ML Front-End Logic (versão final)
+// Suporte ao histórico + GPS + preview + upload
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    // =========================================================
-    // 1 — ENVIO DA IMAGEM PARA ANÁLISE
-    // =========================================================
+    // ====================================
+    // ENVIO DA IMAGEM PARA ANÁLISE
+    // ====================================
+
+    let userLocation = null;
+
+// Solicitar geolocalização ao abrir
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            userLocation = {
+                lat: pos.coords.latitude.toFixed(6),
+                lon: pos.coords.longitude.toFixed(6)
+            };
+            console.log("GPS capturado:", userLocation);
+        },
+        (err) => {
+            console.warn("GPS negado ou indisponível.", err);
+        }
+    );
+} else {
+    console.warn("Geolocalização não suportada.");
+}
+
     const uploadForm = document.getElementById("uploadForm");
 
     if (uploadForm) {
@@ -15,12 +37,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const file = fileInput.files[0];
 
             if (!file) {
-                alert("Selecione uma imagem antes de analisar!");
+                alert("Selecione uma imagem!");
                 return;
             }
 
             const formData = new FormData();
-            formData.append("file", file);  // ✔ backend espera "file"
+            formData.append("file", file);
+
+// Adicionar localização, caso disponível
+if (userLocation) {
+    formData.append("lat", userLocation.lat);
+    formData.append("lon", userLocation.lon);
+}
 
             const resultBox = document.getElementById("result");
             resultBox.classList.remove("hidden");
@@ -39,33 +67,38 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                // Exibir resultado da análise
+                // Exibir resultado
                 resultBox.innerHTML = `
                     <p><b>Classe:</b> ${data.prediction}</p>
                     <p><b>Confiança:</b> ${(data.confidence * 100).toFixed(1)}%</p>
                     <p><b>Data:</b> ${data.timestamp}</p>
+
+                    ${data.gps_link 
+                        ? `<p><a href="${data.gps_link}" target="_blank" class="map-link">📍 Ver no mapa</a></p>`
+                        : `<p>📍 Sem localização</p>`
+                    }
 
                     <div class="img-box mt-3">
                         <img src="/uploads/${data.file}" alt="Imagem analisada">
                     </div>
                 `;
 
+                // Atualiza histórico
                 loadRecent();
 
             } catch (err) {
                 console.error(err);
-                resultBox.innerHTML = `<p class="alert">⚠️ Erro ao processar a imagem.</p>`;
+                resultBox.innerHTML = `<p class="alert">Erro ao processar a imagem.</p>`;
             }
         });
     }
 
-
-    // =========================================================
-    // 2 — CARREGAR HISTÓRICO /api/recent
-    // =========================================================
+    // ====================================
+    // CARREGAR HISTÓRICO DINÂMICO
+    // ====================================
     async function loadRecent() {
         const container = document.querySelector(".recent-list");
-        if (!container) return; // só existe nas páginas certas
+        if (!container) return;
 
         try {
             const res = await fetch("/api/recent");
@@ -76,19 +109,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            container.innerHTML = data.map(item => `
-                <div class="recent-item">
-                    <div class="img-box">
-                        <img src="${item.file_url}" alt="Imagem analisada">
-                    </div>
+            container.innerHTML = data
+                .map(item => `
+                    <div class="recent-item">
+                        <div class="img-box">
+                            <img src="${item.file_url}" alt="Imagem analisada">
+                        </div>
 
-                    <div class="info">
-                        <p><b>Classe:</b> ${item.prediction}</p>
-                        <p><b>Confiança:</b> ${(item.confidence * 100).toFixed(1)}%</p>
-                        <p><b>Data:</b> ${item.timestamp}</p>
+                        <div class="info">
+                            <p><b>Classe:</b> ${item.prediction}</p>
+                            <p><b>Confiança:</b> ${(item.confidence * 100).toFixed(1)}%</p>
+                            <p><b>Data:</b> ${item.timestamp}</p>
+
+                            ${item.gps_link
+                                ? `<p><a href="${item.gps_link}" target="_blank" class="map-link">📍 Ver no mapa</a></p>`
+                                : `<p>📍 Sem localização</p>`
+                            }
+                        </div>
                     </div>
-                </div>
-            `).join("");
+                `)
+                .join("");
 
         } catch (error) {
             console.error("Erro ao carregar histórico:", error);
@@ -96,9 +136,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Carregar histórico automaticamente
+    // Executa carregamento automático
     loadRecent();
 });
+
+
 
 
 

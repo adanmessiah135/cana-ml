@@ -91,30 +91,39 @@ def upload_image():
     if not allowed_file(file.filename):
         return jsonify({"error": "Formato não suportado"}), 400
 
-    # Nome seguro e novo nome único
     filename = secure_filename(file.filename)
     ext = filename.rsplit(".", 1)[1].lower()
     new_filename = f"{uuid.uuid4()}.{ext}"
+    filepath = os.path.join(UPLOAD_FOLDER, new_filename)
 
-    save_path = os.path.join(UPLOAD_FOLDER, new_filename)
-    file.save(save_path)
+    file.save(filepath)
 
-    # COPIAR para histórico
-    shutil.copyfile(save_path, os.path.join(RECENT_FOLDER, new_filename))
+    # ============================
+    # Recebe a geolocalização
+    # ============================
+    lat = request.form.get("lat")
+    lon = request.form.get("lon")
 
-    # <<< MODELO AQUI >>>
-    # temporário até conectar o TensorFlow Lite:
+    gps_link = None
+    if lat and lon:
+        gps_link = f"https://www.google.com/maps?q={lat},{lon}"
+
+    # Resultado da análise (simulado por enquanto)
     result = {
         "file": new_filename,
-        "prediction": "broca",
+        "prediction": "broca",  # temporário
         "confidence": 0.92,
-        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "gps_link": gps_link,
+        "lat": lat,
+        "lon": lon
     }
 
-    # Adiciona no histórico
+    # Salvar no histórico
     recent_predictions.appendleft(result)
 
     return jsonify(result)
+
 
 
 # ===========================================
@@ -137,6 +146,8 @@ def api_recent():
     # preparar urls completas
     for item in data:
         item["file_url"] = f"/static/recent/{item['file']}"
+        item["file_url"] = f"/static/recent/{item['file']}"
+        item["gps_link"] = item.get("gps_link")
 
     return jsonify(data)
 
