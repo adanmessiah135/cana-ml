@@ -7,7 +7,7 @@ from collections import deque
 import os
 import uuid
 
-from model_loader import predict_image
+from model_loader import predict  # IMPORTAÇÃO CORRETA DA IA
 from firebase_init import init_firebase, upload_to_firebase
 
 # ======================================================
@@ -19,7 +19,7 @@ app.secret_key = "super-secret-key"
 # Inicializar Firebase
 init_firebase()
 
-# Pastas locais temporárias
+# Pasta local temporária
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -91,24 +91,24 @@ def upload_image():
     if not allowed_file(file.filename):
         return jsonify({"error": "Formato não suportado"}), 400
 
-    # Novo nome único
+    # Nome único
     filename = secure_filename(file.filename)
     ext = filename.rsplit(".", 1)[1]
     new_filename = f"{uuid.uuid4()}.{ext}"
     local_path = os.path.join(UPLOAD_FOLDER, new_filename)
 
-    # Salvar localmente
+    # Salvar temporariamente
     file.save(local_path)
 
-    # Executar modelo TFLite
+    # IA — Modelo TFLite
     try:
-        predicted_class, confidence, class_idx = predict_image(local_path)
+        predicted_class, confidence, class_idx = predict(local_path)
     except Exception as e:
         print("Erro no modelo:", e)
         os.remove(local_path)
         return jsonify({"error": "Erro ao processar imagem com IA"}), 500
 
-    # Enviar ao Firebase
+    # Firebase
     try:
         firebase_url = upload_to_firebase(local_path, new_filename)
     finally:
@@ -149,7 +149,7 @@ def recent_page():
 
 
 # ======================================================
-# HISTÓRICO API
+# HISTÓRICO (API)
 # ======================================================
 @app.route("/api/recent")
 def api_recent():
@@ -161,6 +161,7 @@ def api_recent():
 # ======================================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
 
 

@@ -7,6 +7,7 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install --no-cache-dir -r requirements.txt
+      mkdir -p /app/uploads
 
     startCommand: >
       gunicorn app:app
@@ -19,4 +20,5 @@ services:
       - name: uploads
         mountPath: /app/uploads
         sizeGB: 1
+
 
