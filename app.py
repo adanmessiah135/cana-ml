@@ -7,7 +7,7 @@ from collections import deque
 import os
 import uuid
 
-from model_loader import predict          # IA (TFLite)
+from model_loader import predict_image as predict
 from firebase_init import init_firebase, upload_to_firebase  # Firebase Storage
 
 # ======================================================
