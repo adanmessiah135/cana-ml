@@ -97,7 +97,8 @@ def index():
 def dashboard():
     if "logged" not in session:
         return redirect("/login")
-    return render_template("dashboard.html", recent_predictions=recent_predictions)
+    return render_template("dashboard.html", recent_predictions=list(recent_predictions))
+
 
 
 
