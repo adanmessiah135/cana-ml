@@ -7,11 +7,11 @@ from collections import deque
 import os
 import uuid
 
-from model_loader import predict_image
-from firebase_init import init_firebase, upload_to_firebase
+from model_loader import predict          # IA (TFLite)
+from firebase_init import init_firebase, upload_to_firebase  # Firebase Storage
 
 # ======================================================
-# CONFIGURAÇÃO PRINCIPAL
+# CONFIG PRINCIPAL
 # ======================================================
 app = Flask(__name__)
 app.secret_key = "super-secret-key"
@@ -26,61 +26,63 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Extensões permitidas
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
-# Histórico (últimas 10 análises)
+# Histórico (últimas 10 análises em memória)
 recent_predictions = deque(maxlen=10)
 
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def agronomic_recommendation(confidence):
-    """
-    Retorna uma recomendação técnica baseada no nível de confiança do modelo.
-    Pensado como um engenheiro-agrônomo.
-    """
-    if confidence >= 0.80:
-        return {
-            "level": "alta",
-            "color": "success",
-            "message": (
-                "A IA apresenta alta confiabilidade nesta classificação. "
-                "A amostra é consistente com o padrão visual da classe identificada. "
-                "Recomenda-se registrar e acompanhar a evolução no talhão."
-            )
-        }
 
-    elif 0.60 <= confidence < 0.80:
+def build_recommendation(prediction: str, confidence: float) -> dict:
+    """
+    Gera recomendação agronômica simples com base na classe e na confiança.
+    """
+    # Faixas de confiança
+    if confidence < 0.6:
+        return {
+            "level": "baixa",
+            "color": "orange",  # tratado no HTML como alert-orange
+            "message": (
+                "A confiança do modelo é baixa. "
+                "Recomenda-se coletar uma nova amostra (outra folha, outro ângulo) "
+                "e, se possível, solicitar avaliação de um engenheiro-agrônomo."
+            ),
+        }
+    elif confidence < 0.8:
         return {
             "level": "moderada",
             "color": "warning",
             "message": (
-                "A classificação é provavelmente correta, mas requer confirmação. "
-                "Recomenda-se coletar novas imagens de outras folhas da mesma planta "
-                "e observar a presença de sintomas adicionais no campo."
-            )
+                "O modelo identificou um possível quadro de "
+                f"{prediction}. Sugere-se monitorar a área, repetir a análise "
+                "em mais folhas e acompanhar possíveis avanços dos sintomas."
+            ),
         }
-
-    elif 0.40 <= confidence < 0.60:
-        return {
-            "level": "baixa",
-            "color": "orange",
-            "message": (
-                "A acurácia é baixa. A imagem pode estar incompleta ou com condições "
-                "de iluminação desfavoráveis. Coletar uma nova amostra com mais luz "
-                "e diferentes ângulos."
-            )
-        }
-
     else:
-        return {
-            "level": "crítica",
-            "color": "danger",
-            "message": (
-                "A confiabilidade é insuficiente para diagnóstico. "
-                "Recomenda-se avaliação presencial de um técnico agrícola "
-                "ou engenheiro-agrônomo no talhão."
-            )
-        }
+        # Alta confiança
+        if prediction.lower() == "healthy":
+            return {
+                "level": "alta",
+                "color": "success",
+                "message": (
+                    "Folha considerada saudável com alta confiança. "
+                    "Sugere-se manter o manejo atual, monitorando rotineiramente "
+                    "para detecção precoce de qualquer alteração."
+                ),
+            }
+        else:
+            return {
+                "level": "alta",
+                "color": "danger",
+                "message": (
+                    f"Doença {prediction} detectada com alta confiança. "
+                    "Recomenda-se avaliação presencial de um engenheiro-agrônomo, "
+                    "vistorias em talhões vizinhos e planejamento de manejo específico "
+                    "conforme recomendações técnicas."
+                ),
+            }
+
 
 # ======================================================
 # ROTAS PRINCIPAIS
@@ -89,17 +91,20 @@ def agronomic_recommendation(confidence):
 def index():
     if "logged" not in session:
         return redirect("/login")
+    # Se você quiser que caia direto no dashboard:
     return redirect("/dashboard")
-
 
 
 @app.route("/dashboard")
 def dashboard():
     if "logged" not in session:
         return redirect("/login")
-    return render_template("dashboard.html", recent_predictions=list(recent_predictions))
 
-
+    # Converter deque -> list para usar no Jinja + tojson
+    return render_template(
+        "dashboard.html",
+        recent_predictions=list(recent_predictions),
+    )
 
 
 # ======================================================
@@ -111,9 +116,10 @@ def login():
         user = request.form.get("username")
         password = request.form.get("password")
 
+        # login simples (demo)
         if user == "admin" and password == "123":
             session["logged"] = True
-            return redirect("/")
+            return redirect("/dashboard")
         else:
             return render_template("login.html", error="Credenciais inválidas")
 
@@ -153,10 +159,11 @@ def upload_image():
 
     # IA — Modelo TFLite
     try:
-        predicted_class, confidence, class_idx = predict_image(local_path)
+        predicted_class, confidence, class_idx = predict(local_path)
     except Exception as e:
         print("Erro no modelo:", e)
-        os.remove(local_path)
+        if os.path.exists(local_path):
+            os.remove(local_path)
         return jsonify({"error": "Erro ao processar imagem com IA"}), 500
 
     # Firebase
@@ -173,20 +180,20 @@ def upload_image():
     if lat and lon:
         gps_link = f"https://www.google.com/maps?q={lat},{lon}"
 
+    # Recomendação agronômica
+    recommendation = build_recommendation(predicted_class, confidence)
+
     # Resultado final
-    recommendation = agronomic_recommendation(confidence)
-
     result = {
-    "file": new_filename,
-    "url": firebase_url,
-    "prediction": predicted_class,
-    "confidence": confidence,
-    "recommendation": recommendation,
-    "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-    "gps_link": gps_link,
-    "class_idx": class_idx,
-}
-
+        "file": new_filename,
+        "url": firebase_url,
+        "prediction": predicted_class,
+        "confidence": confidence,
+        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "gps_link": gps_link,
+        "class_idx": class_idx,
+        "recommendation": recommendation,
+    }
 
     recent_predictions.appendleft(result)
 
@@ -194,18 +201,15 @@ def upload_image():
 
 
 # ======================================================
-# HISTÓRICO - PÁGINA
+# HISTÓRICO - PÁGINA / API
 # ======================================================
 @app.route("/recent")
 def recent_page():
     if "logged" not in session:
         return redirect("/login")
-    return render_template("recent.html")
+    return render_template("recent.html")  # se usar outra página, ajuste aqui
 
 
-# ======================================================
-# HISTÓRICO (API)
-# ======================================================
 @app.route("/api/recent")
 def api_recent():
     return jsonify(list(recent_predictions))
@@ -215,7 +219,9 @@ def api_recent():
 # EXECUÇÃO LOCAL
 # ======================================================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # Para rodar local:
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
 
