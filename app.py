@@ -33,6 +33,54 @@ recent_predictions = deque(maxlen=10)
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def agronomic_recommendation(confidence):
+    """
+    Retorna uma recomendação técnica baseada no nível de confiança do modelo.
+    Pensado como um engenheiro-agrônomo.
+    """
+    if confidence >= 0.80:
+        return {
+            "level": "alta",
+            "color": "success",
+            "message": (
+                "A IA apresenta alta confiabilidade nesta classificação. "
+                "A amostra é consistente com o padrão visual da classe identificada. "
+                "Recomenda-se registrar e acompanhar a evolução no talhão."
+            )
+        }
+
+    elif 0.60 <= confidence < 0.80:
+        return {
+            "level": "moderada",
+            "color": "warning",
+            "message": (
+                "A classificação é provavelmente correta, mas requer confirmação. "
+                "Recomenda-se coletar novas imagens de outras folhas da mesma planta "
+                "e observar a presença de sintomas adicionais no campo."
+            )
+        }
+
+    elif 0.40 <= confidence < 0.60:
+        return {
+            "level": "baixa",
+            "color": "orange",
+            "message": (
+                "A acurácia é baixa. A imagem pode estar incompleta ou com condições "
+                "de iluminação desfavoráveis. Coletar uma nova amostra com mais luz "
+                "e diferentes ângulos."
+            )
+        }
+
+    else:
+        return {
+            "level": "crítica",
+            "color": "danger",
+            "message": (
+                "A confiabilidade é insuficiente para diagnóstico. "
+                "Recomenda-se avaliação presencial de um técnico agrícola "
+                "ou engenheiro-agrônomo no talhão."
+            )
+        }
 
 # ======================================================
 # ROTAS PRINCIPAIS

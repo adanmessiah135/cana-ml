@@ -2,34 +2,110 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Cana-ML • Últimas Análises</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Cana-ML • Últimas análises</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f3f7f2;
+        }
+        .sidebar {
+            height: 100vh;
+            background: #1f4d2e;
+            padding: 20px;
+            color: white;
+        }
+        .sidebar a {
+            color: #d8ffd8;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .sidebar a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .alert-orange {
+            background-color: #ffcc80;
+            color: #663c00;
+        }
+    </style>
 </head>
 
 <body>
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <h2>🌿 Cana-ML</h2>
-        <nav>
-            <a href="{{ url_for('index') }}">Dashboard</a>
-            <a href="{{ url_for('recent_page') }}" class="active">Últimas análises</a>
-            <a href="{{ url_for('logout') }}">Sair</a>
-        </nav>
-    </aside>
+<div class="container-fluid">
+    <div class="row">
 
-    <!-- CONTEÚDO -->
-    <main>
-        <h1>📊 Histórico de Análises</h1>
+        <!-- ========== SIDEBAR ========== -->
+        <div class="col-3 sidebar">
+            <h3 class="mb-4">🌱 Cana-ML</h3>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/recent">Últimas análises</a>
+            <a href="/logout">Sair</a>
+        </div>
 
-        <section class="card-container recent-list" id="recentContainer">
-            <p>Carregando histórico...</p>
-        </section>
-    </main>
+        <!-- ========== CONTEÚDO PRINCIPAL ========== -->
+        <div class="col-9 p-4">
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+            <h2 class="mb-4">Últimas análises</h2>
+
+            {% if recent_predictions %}
+                {% for item in recent_predictions %}
+                
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-body">
+
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <img src="{{ item.url }}" class="img-fluid rounded" style="max-width: 240px;">
+                            </div>
+
+                            <div class="col-md-8">
+                                <h5>Classe: {{ item.prediction }}</h5>
+                                <p><strong>Confiança:</strong> {{ (item.confidence * 100)|round(1) }}%</p>
+
+                                <!-- RECOMENDAÇÃO AGRONÔMICA -->
+                                {% if item.recommendation %}
+                                    <div class="alert 
+                                        {% if item.recommendation.color == 'orange' %}
+                                            alert-orange
+                                        {% else %}
+                                            alert-{{ item.recommendation.color }}
+                                        {% endif %}
+                                    ">
+                                        <strong>Nível de Confiabilidade: {{ item.recommendation.level|capitalize }}</strong><br>
+                                        {{ item.recommendation.message }}
+                                    </div>
+                                {% endif %}
+
+                                <p><strong>Data:</strong> {{ item.timestamp }}</p>
+
+                                {% if item.gps_link %}
+                                    <p><a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a></p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    Nenhuma análise registrada ainda.
+                </div>
+            {% endif %}
+
+        </div>
+
+    </div>
+</div>
+
 </body>
 </html>
+
 
 
 

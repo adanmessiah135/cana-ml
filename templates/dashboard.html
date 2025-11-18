@@ -1,253 +1,155 @@
-<div class="max-w-6xl mx-auto mt-10">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cana-ML • Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <h1 class="text-3xl font-bold text-green-400 mb-8">
-    🌿 Cana-ML • Agro Analytics
-  </h1>
+    <style>
+        body {
+            background-color: #f3f7f2;
+        }
+        .sidebar {
+            height: 100vh;
+            background: #1f4d2e;
+            padding: 20px;
+            color: white;
+        }
+        .sidebar a {
+            color: #d8ffd8;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .sidebar a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .alert-orange {
+            background-color: #ffcc80;
+            color: #663c00;
+        }
+        .prediction-img {
+            max-width: 260px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
 
-  <!-- GRID PRINCIPAL -->
-  <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<body>
 
-    <!-- CARD: UPLOAD -->
-    <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 relative">
+<div class="container-fluid">
+    <div class="row">
 
-      <!-- PRÉ-VISUALIZAÇÃO -->
-      <div id="previewBox" class="hidden mt-4">
-        <p class="text-gray-300 mb-2">🖼️ Pré-visualização</p>
-        <img id="previewImage"
-             class="w-full max-h-72 object-cover rounded-lg border border-gray-700 shadow">
-      </div>
+        <!-- ========== SIDEBAR ========== -->
+        <div class="col-3 sidebar">
+            <h3 class="mb-4">🌱 Cana-ML</h3>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/recent">Últimas análises</a>
+            <a href="/logout">Sair</a>
+        </div>
 
-      <h2 class="text-xl font-semibold mb-4 text-green-300 mt-4">Análise de Imagem</h2>
+        <!-- ========== CONTEÚDO PRINCIPAL ========== -->
+        <div class="col-9 p-4">
 
-      <form id="predictForm" class="space-y-4">
-        <input type="file" name="image" id="image"
-               class="w-full text-sm text-gray-300 file:bg-gray-700
-                      file:border-0 file:px-3 file:py-2 file:rounded file:text-gray-200
-                      hover:file:bg-gray-600 cursor-pointer">
+            <h2 class="mb-4">Diagnóstico Atual</h2>
 
-        <button id="btnAnalyze" type="submit"
-                class="bg-green-600 hover:bg-green-500 py-2 px-4 rounded w-full text-center
-                       transition disabled:opacity-40 disabled:cursor-not-allowed">
-          Analisar Imagem
-        </button>
-      </form>
+            {% if recent_predictions and recent_predictions[0] %}
+                {% set item = recent_predictions[0] %}
 
-      <!-- RESULTADO -->
-      <div id="result" class="mt-6 text-sm"></div>
+                <div class="card shadow-sm mb-5">
+                    <div class="card-body">
 
-      <!-- LOADER -->
-      <div id="loadingOverlay"
-           class="hidden absolute inset-0 bg-black bg-opacity-60 flex flex-col
-                  items-center justify-center rounded-xl">
+                        <h4>Classe detectada: {{ item.prediction }}</h4>
+                        <p><strong>Confiança:</strong> {{ (item.confidence * 100)|round(1) }}%</p>
 
-        <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-green-400"></div>
-        <p class="text-green-300 mt-4 text-sm">Analisando imagem...</p>
-      </div>
+                        <!-- RECOMENDAÇÃO AGRONÔMICA -->
+                        {% if item.recommendation %}
+                            <div class="alert 
+                                {% if item.recommendation.color == 'orange' %}
+                                    alert-orange
+                                {% else %}
+                                    alert-{{ item.recommendation.color }}
+                                {% endif %}
+                            ">
+                                <strong>Nível de Confiabilidade: {{ item.recommendation.level|capitalize }}</strong><br>
+                                {{ item.recommendation.message }}
+                            </div>
+                        {% endif %}
+
+                        <!-- IMAGEM DA FOLHA -->
+                        <img src="{{ item.url }}" class="prediction-img mt-3">
+
+                        <p class="mt-3"><strong>Data:</strong> {{ item.timestamp }}</p>
+
+                        {% if item.gps_link %}
+                            <p><a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a></p>
+                        {% endif %}
+
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    Nenhuma análise realizada ainda. Envie uma imagem para começar.
+                </div>
+            {% endif %}
+
+            <!-- ========== LISTA DE ÚLTIMAS ANÁLISES ========== -->
+            <h3>Últimas análises</h3>
+
+            {% if recent_predictions %}
+                {% for item in recent_predictions %}
+
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-body">
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <img src="{{ item.url }}" class="img-fluid rounded">
+                            </div>
+
+                            <div class="col-md-8">
+                                <h5>Classe: {{ item.prediction }}</h5>
+                                <p><strong>Confiança:</strong> {{ (item.confidence * 100)|round(1) }}%</p>
+
+                                <!-- RECOMENDAÇÃO AGRONÔMICA -->
+                                {% if item.recommendation %}
+                                    <div class="alert 
+                                        {% if item.recommendation.color == 'orange' %}
+                                            alert-orange
+                                        {% else %}
+                                            alert-{{ item.recommendation.color }}
+                                        {% endif %}
+                                    ">
+                                        <strong>Nível: {{ item.recommendation.level|capitalize }}</strong><br>
+                                        {{ item.recommendation.message }}
+                                    </div>
+                                {% endif %}
+
+                                <p><strong>Data:</strong> {{ item.timestamp }}</p>
+
+                                {% if item.gps_link %}
+                                    <p><a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a></p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-secondary">Nenhum histórico disponível.</div>
+            {% endif %}
+
+        </div>
     </div>
-
-    <!-- CARD: ÚLTIMAS ANÁLISES -->
-    <div class="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-
-      <h2 class="text-xl font-semibold mb-4 text-green-300">Últimas análises</h2>
-
-      <div id="recentList" class="flex flex-col gap-4"></div>
-
-    </div>
-
-  </section>
 </div>
 
-<script>
-/* ELEMENTOS */
-const form = document.getElementById("predictForm");
-const loadingOverlay = document.getElementById("loadingOverlay");
-const button = document.getElementById("btnAnalyze");
-const imageInput = document.getElementById("image");
-const previewBox = document.getElementById("previewBox");
-const previewImage = document.getElementById("previewImage");
+</body>
+</html>
 
-/* =====================================================
-      PRÉ-VISUALIZAÇÃO DA IMAGEM
-===================================================== */
-imageInput.addEventListener("change", () => {
-  const file = imageInput.files[0];
-  if (!file) {
-    previewBox.classList.add("hidden");
-    return;
-  }
-
-  const imageURL = URL.createObjectURL(file);
-  previewImage.src = imageURL;
-  previewBox.classList.remove("hidden");
-});
-
-/* =====================================================
-      SUBMIT / PREDICT
-===================================================== */
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  if (!imageInput.files.length) {
-    alert("Selecione uma imagem antes de analisar!");
-    return;
-  }
-
-  loadingOverlay.classList.remove("hidden");
-  button.disabled = true;
-
-  document.getElementById("result").innerHTML = "";
-
-  const data = new FormData(form);
-  const res = await fetch("/predict", { method: "POST", body: data });
-  const result = await res.json();
-
-  loadingOverlay.classList.add("hidden");
-  button.disabled = false;
-
-  if (result.error) {
-    document.getElementById("result").innerHTML =
-      `<p class="text-red-400">${result.error}</p>`;
-    return;
-  }
-
-  /* =====================================================
-        CARD DE RESULTADO
-  ===================================================== */
-  document.getElementById("result").innerHTML = `
-    <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 mt-4 flex gap-4">
-
-      <img src="/uploads/${result.file}"
-           class="w-32 h-32 object-cover rounded-lg shadow">
-
-      <div class="flex-1">
-
-<h3 class="text-2xl font-bold flex items-center gap-2">
-  ${getClassIcon(result.class)} 
-  <span class="${getClassColor(result.class).replace('bg-', 'text-')}">
-    ${result.class}
-  </span>
-</h3>
-
-
-        <p class="text-sm text-gray-300 mt-1">${result.explain}</p>
-
-        <p class="text-sm text-gray-400 mt-3">
-          <b>Confiança:</b> ${(result.confidence * 100).toFixed(1)}%
-        </p>
-
-        <div class="w-full bg-gray-700 rounded h-2 mt-1">
-          <div class="${getColorClass(result.class)} h-2 rounded"
-               style="width:${(result.confidence * 100).toFixed(1)}%"></div>
-        </div>
-
-        <p class="text-xs text-gray-500 mt-3"><b>Arquivo:</b> ${result.file}</p>
-      </div>
-    </div>
-  `;
-
-  loadRecent();
-});
-
-/* =====================================================
-      ÚLTIMAS ANÁLISES
-===================================================== */
-async function loadRecent() {
-  const res = await fetch("/recent");
-  const data = await res.json();
-  const list = document.getElementById("recentList");
-
-  if (!data.length) {
-    list.innerHTML =
-      `<p class="text-gray-400 text-sm">Nenhuma análise recente encontrada.</p>`;
-    return;
-  }
-
-  list.innerHTML = data
-    .map((r) => `
-      <div class="flex items-center gap-4 bg-gray-900 rounded-xl p-4 border border-gray-700
-                  hover:border-green-400 transition">
-
-        <img src="/uploads/${r.file}"
-             class="w-20 h-20 object-cover rounded-lg shadow">
-
-        <div class="flex-1">
-
-          <p class="text-lg font-semibold flex items-center gap-2">
-  ${getClassIcon(r.class)}
-  <span class="${getClassColor(r.class).replace('bg-', 'text-')}">
-    ${r.class}
-  </span>
-</p>
-
-          <p class="text-sm text-gray-300 mb-1">
-            Confiança: <b>${(r.confidence * 100).toFixed(1)}%</b>
-          </p>
-
-          <div class="w-full bg-gray-700 rounded h-2 mb-1">
-            <div class="${getColorClass(r.class)} h-2 rounded"
-                 style="width:${(r.confidence * 100).toFixed(1)}%"></div>
-          </div>
-
-          <p class="text-xs text-gray-400">Arquivo: ${r.file}</p>
-        </div>
-      </div>
-    `)
-    .join("");
-}
-
-/* =====================================================
-      CORES POR CLASSE
-===================================================== */
-function getColorClass(cls) {
-  switch (cls) {
-    case "Sadia": return "bg-green-500";
-    case "Ferrugem": return "bg-yellow-500";
-    case "Mosaico": return "bg-red-500";
-    case "Broca": return "bg-purple-500";
-    default: return "bg-blue-500";
-  }
-}
-/* =====================================================
-      CORES POR CLASSE  (NOVA VERSÃO)
-===================================================== */
-function getClassColor(cls) {
-  switch (cls) {
-    case "Sadia": return "bg-green-500";
-    case "Ferrugem": return "bg-yellow-500";
-    case "Mosaico": return "bg-red-500";
-    case "Broca": return "bg-purple-500";
-    default: return "bg-blue-500";
-  }
-}
-
-/* =====================================================
-      ÍCONES POR CLASSE
-===================================================== */
-function getClassIcon(cls) {
-  switch (cls) {
-    case "Sadia": return "🌱";
-    case "Ferrugem": return "🍁";
-    case "Mosaico": return "🧬";
-    case "Broca": return "🐛";
-    default: return "🔍";
-  }
-}
-
-/* =====================================================
-      BADGE FORMATADA (cor + ícone)
-===================================================== */
-function renderBadge(cls) {
-  return `
-    <span class="inline-flex items-center gap-2 bg-gray-700 px-3 py-1 rounded-full text-sm">
-      <span>${getClassIcon(cls)}</span>
-      <span class="font-semibold text-green-300">${cls}</span>
-    </span>
-  `;
-}
-
-
-loadRecent();
-</script>
 
 
 
