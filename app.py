@@ -89,14 +89,16 @@ def agronomic_recommendation(confidence):
 def index():
     if "logged" not in session:
         return redirect("/login")
-    return render_template("index.html")
+    return redirect("/dashboard")
+
 
 
 @app.route("/dashboard")
 def dashboard():
     if "logged" not in session:
         return redirect("/login")
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", recent_predictions=recent_predictions)
+
 
 
 # ======================================================
@@ -171,15 +173,19 @@ def upload_image():
         gps_link = f"https://www.google.com/maps?q={lat},{lon}"
 
     # Resultado final
+    recommendation = agronomic_recommendation(confidence)
+
     result = {
-        "file": new_filename,
-        "url": firebase_url,
-        "prediction": predicted_class,
-        "confidence": confidence,
-        "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "gps_link": gps_link,
-        "class_idx": class_idx,
-    }
+    "file": new_filename,
+    "url": firebase_url,
+    "prediction": predicted_class,
+    "confidence": confidence,
+    "recommendation": recommendation,
+    "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+    "gps_link": gps_link,
+    "class_idx": class_idx,
+}
+
 
     recent_predictions.appendleft(result)
 
