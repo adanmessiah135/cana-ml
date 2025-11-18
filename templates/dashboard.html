@@ -3,57 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <title>Cana-ML • Dashboard</title>
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
-        body {
-            background-color: #f3f7f2;
-        }
+        body { background-color: #f3f7f2; }
+
+        /* Sidebar Desktop */
         .sidebar {
             height: 100vh;
             background: #1f4d2e;
             padding: 20px;
             color: white;
         }
+
         .sidebar a {
             color: #d8ffd8;
             text-decoration: none;
             display: block;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
             font-size: 18px;
         }
-        .sidebar a:hover {
-            color: #ffffff;
-            text-decoration: underline;
+
+        .sidebar a:hover { color: #ffffff; }
+
+        /* Mobile top menu */
+        .mobile-menu {
+            display: none;
+            background-color: #1f4d2e;
+            padding: 12px;
+            color: white;
         }
-        .alert-orange {
-            background-color: #ffcc80;
-            color: #663c00;
+
+        .mobile-menu a {
+            color: #d8ffd8;
+            margin-right: 20px;
+            text-decoration: none;
+            font-size: 18px;
         }
+
+        /* Orange custom alert */
+        .alert-orange { 
+            background-color: #ffcc80; 
+            color: #663c00; 
+        }
+
+        /* Better image visuals */
         .prediction-img {
-            max-width: 260px;
-            border-radius: 8px;
+            width: 100%;
+            max-width: 360px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+
+        /* Hide sidebar on mobile, show top menu */
+        @media (max-width: 992px) {
+            .sidebar { display: none; }
+            .mobile-menu { display: block; }
+        }
+
+        /* Upload block spacing */
+        #previewBox img {
+            max-width: 280px;
+            border-radius: 10px;
         }
     </style>
 </head>
 
 <body>
 
+<!-- ===================== MENU MOBILE ===================== -->
+<div class="mobile-menu d-lg-none">
+    <a href="/dashboard">Dashboard</a>
+    <a href="/recent">Últimas análises</a>
+    <a href="/logout">Sair</a>
+</div>
+
+
 <div class="container-fluid">
     <div class="row">
 
-        <!-- ========== SIDEBAR ========== -->
-        <div class="col-3 sidebar">
+        <!-- ===================== SIDEBAR (Desktop) ===================== -->
+        <div class="col-lg-3 sidebar d-none d-lg-block">
             <h3 class="mb-4">🌱 Cana-ML</h3>
             <a href="/dashboard">Dashboard</a>
             <a href="/recent">Últimas análises</a>
             <a href="/logout">Sair</a>
         </div>
 
-        <!-- ========== CONTEÚDO PRINCIPAL ========== -->
-        <div class="col-9 p-4">
+        <!-- ===================== CONTEÚDO ===================== -->
+        <div class="col-lg-9 p-4">
 
-            <h2 class="mb-4">Diagnóstico Atual</h2>
+            <!-- ===================== UPLOAD ===================== -->
+            <h2>Nova Análise</h2>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+
+                    <h5 class="fw-bold">Envie uma imagem da folha da cana</h5>
+                    <p class="text-muted">Selecione uma imagem clara e bem iluminada.</p>
+
+                    <form id="uploadForm" enctype="multipart/form-data">
+
+                        <div class="input-group">
+                            <input type="file" accept="image/*" name="file" id="fileInput" class="form-control" required>
+                            <button class="btn btn-success" type="submit">Analisar</button>
+                        </div>
+                    </form>
+
+                    <!-- PREVIEW -->
+                    <div id="previewBox" class="mt-3" style="display:none;">
+                        <p><strong>Pré-visualização:</strong></p>
+                        <img id="previewImg" src="">
+                    </div>
+
+                    <!-- STATUS -->
+                    <div id="uploadStatus" class="mt-3"></div>
+
+                    <!-- LOADING -->
+                    <div id="loadingBox" class="alert alert-info mt-3" style="display:none;">
+                        ⏳ Analisando imagem...
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- ===================== SCRIPT - IA + UPLOAD ===================== -->
+            <script>
+            document.getElementById("fileInput").addEventListener("change", function() {
+                const file = this.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById("previewImg").src = e.target.result;
+                    document.getElementById("previewBox").style.display = "block";
+                };
+                reader.readAsDataURL(file);
+            });
+
+            document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+                e.preventDefault();
+
+                const formData = new FormData();
+                const fileInput = document.getElementById("fileInput");
+
+                if (!fileInput.files.length) {
+                    alert("Selecione uma imagem.");
+                    return;
+                }
+
+                formData.append("file", fileInput.files[0]);
+
+                // GPS opcional
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        formData.append("lat", pos.coords.latitude);
+                        formData.append("lon", pos.coords.longitude);
+                    });
+                }
+
+                document.getElementById("loadingBox").style.display = "block";
+                document.getElementById("uploadStatus").innerHTML = "";
+
+                const response = await fetch("/upload", { method: "POST", body: formData });
+                const data = await response.json();
+
+                document.getElementById("loadingBox").style.display = "none";
+
+                if (data.error) {
+                    document.getElementById("uploadStatus").innerHTML =
+                        `<div class='alert alert-danger'>Erro: ${data.error}</div>`;
+                } else {
+                    document.getElementById("uploadStatus").innerHTML =
+                        `<div class='alert alert-success'>✔ Análise concluída!</div>`;
+
+                    setTimeout(() => location.reload(), 1200);
+                }
+            });
+            </script>
+
+
+            <!-- ===================== DIAGNÓSTICO ATUAL ===================== -->
+            <h2 class="mt-5 mb-3 fw-bold">Diagnóstico Atual</h2>
 
             {% if recent_predictions and recent_predictions[0] %}
                 {% set item = recent_predictions[0] %}
@@ -61,83 +195,82 @@
                 <div class="card shadow-sm mb-5">
                     <div class="card-body">
 
-                        <h4>Classe detectada: {{ item.prediction }}</h4>
+                        <h4 class="fw-bold">{{ item.prediction }}</h4>
                         <p><strong>Confiança:</strong> {{ (item.confidence * 100)|round(1) }}%</p>
 
-                        <!-- RECOMENDAÇÃO AGRONÔMICA -->
                         {% if item.recommendation %}
-                            <div class="alert 
-                                {% if item.recommendation.color == 'orange' %}
-                                    alert-orange
-                                {% else %}
-                                    alert-{{ item.recommendation.color }}
-                                {% endif %}
-                            ">
-                                <strong>Nível de Confiabilidade: {{ item.recommendation.level|capitalize }}</strong><br>
-                                {{ item.recommendation.message }}
-                            </div>
+                        <div class="alert 
+                            {% if item.recommendation.color == 'orange' %}
+                                alert-orange
+                            {% else %}
+                                alert-{{ item.recommendation.color }}
+                            {% endif %}
+                        ">
+                            <strong>Nível: {{ item.recommendation.level|capitalize }}</strong><br>
+                            {{ item.recommendation.message }}
+                        </div>
                         {% endif %}
 
-                        <!-- IMAGEM DA FOLHA -->
                         <img src="{{ item.url }}" class="prediction-img mt-3">
 
                         <p class="mt-3"><strong>Data:</strong> {{ item.timestamp }}</p>
 
                         {% if item.gps_link %}
-                            <p><a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a></p>
+                        <a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a>
                         {% endif %}
-
                     </div>
                 </div>
+
             {% else %}
                 <div class="alert alert-info">
-                    Nenhuma análise realizada ainda. Envie uma imagem para começar.
+                    Nenhuma análise ainda.
                 </div>
             {% endif %}
 
-            <!-- ========== LISTA DE ÚLTIMAS ANÁLISES ========== -->
-            <h3>Últimas análises</h3>
+
+            <!-- ===================== HISTÓRICO ===================== -->
+            <h2 class="fw-bold mb-3">Últimas análises</h2>
 
             {% if recent_predictions %}
                 {% for item in recent_predictions %}
-
                 <div class="card mb-4 shadow-sm">
                     <div class="card-body">
 
                         <div class="row">
-                            <div class="col-md-4">
-                                <img src="{{ item.url }}" class="img-fluid rounded">
+
+                            <!-- Imagem -->
+                            <div class="col-md-4 text-center mb-3">
+                                <img src="{{ item.url }}" class="prediction-img">
                             </div>
 
+                            <!-- Informações -->
                             <div class="col-md-8">
-                                <h5>Classe: {{ item.prediction }}</h5>
+                                <h5 class="fw-bold">{{ item.prediction }}</h5>
                                 <p><strong>Confiança:</strong> {{ (item.confidence * 100)|round(1) }}%</p>
 
-                                <!-- RECOMENDAÇÃO AGRONÔMICA -->
                                 {% if item.recommendation %}
-                                    <div class="alert 
-                                        {% if item.recommendation.color == 'orange' %}
-                                            alert-orange
-                                        {% else %}
-                                            alert-{{ item.recommendation.color }}
-                                        {% endif %}
-                                    ">
-                                        <strong>Nível: {{ item.recommendation.level|capitalize }}</strong><br>
-                                        {{ item.recommendation.message }}
-                                    </div>
+                                <div class="alert 
+                                    {% if item.recommendation.color == 'orange' %}
+                                        alert-orange
+                                    {% else %}
+                                        alert-{{ item.recommendation.color }}
+                                    {% endif %}
+                                ">
+                                    <strong>Nível: {{ item.recommendation.level|capitalize }}</strong><br>
+                                    {{ item.recommendation.message }}
+                                </div>
                                 {% endif %}
 
                                 <p><strong>Data:</strong> {{ item.timestamp }}</p>
 
                                 {% if item.gps_link %}
-                                    <p><a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a></p>
+                                <a href="{{ item.gps_link }}" target="_blank">📍 Ver no mapa</a>
                                 {% endif %}
                             </div>
                         </div>
 
                     </div>
                 </div>
-
                 {% endfor %}
             {% else %}
                 <div class="alert alert-secondary">Nenhum histórico disponível.</div>
@@ -149,6 +282,7 @@
 
 </body>
 </html>
+
 
 
 
