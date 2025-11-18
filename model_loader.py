@@ -1,5 +1,5 @@
 import numpy as np
-import cv2
+from PIL import Image
 import os
 from tflite_runtime.interpreter import Interpreter  # IMPORTANTE
 
@@ -29,13 +29,20 @@ CLASSES = [
 ]
 
 def preprocess_image(image_path):
-    img = cv2.imread(image_path)
-    img = cv2.resize(img, IMG_SIZE)
-    img = img.astype(np.float32) / 255.0
+    """Pré-processa a imagem usando Pillow (compatível com Render)."""
+    img = Image.open(image_path).convert("RGB")
+    img = img.resize(IMG_SIZE)
+
+    # Converte para numpy e normaliza
+    img = np.array(img, dtype=np.float32) / 255.0
+
+    # Expande para o formato: (1, 224, 224, 3)
     img = np.expand_dims(img, axis=0)
+
     return img
 
 def predict_image(image_path):
+    """Executa a predição usando o modelo TFLite."""
     img = preprocess_image(image_path)
 
     interpreter.set_tensor(input_details[0]['index'], img)
@@ -46,6 +53,7 @@ def predict_image(image_path):
     confidence = float(np.max(output))
 
     return CLASSES[class_idx], confidence, class_idx
+
 
 
 

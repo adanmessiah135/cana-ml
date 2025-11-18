@@ -7,7 +7,7 @@ from collections import deque
 import os
 import uuid
 
-from model_loader import predict  # IMPORTAÇÃO CORRETA DA IA
+from model_loader import predict_image
 from firebase_init import init_firebase, upload_to_firebase
 
 # ======================================================
@@ -102,7 +102,7 @@ def upload_image():
 
     # IA — Modelo TFLite
     try:
-        predicted_class, confidence, class_idx = predict(local_path)
+        predicted_class, confidence, class_idx = predict_image(local_path)
     except Exception as e:
         print("Erro no modelo:", e)
         os.remove(local_path)
